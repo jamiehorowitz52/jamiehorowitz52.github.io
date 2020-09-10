@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Jamie Horowitz Portfolio</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <style>
+    
+    h1 {
+        font-family: "Arial Rounded MT Bold", "Helvetica Rounded", Arial, sans-serif;
+    }
+    
+    about_title {
+        font-family: "Arial Rounded MT Bold", "Helvetica Rounded", Arial, sans-serif;
+        font-size: 3vh;
+        margin-bottom: 20px;
+    }
+     
+    p {
+        font-family: Arial, sans-serif;
+        padding-left: 80px;
+        font-size: 1.7vh;
+    }
+    
+    p1 {
+        font-family: Arial, sans-serif;
+        padding-left: 0px;
+        font-size: 1.7vh;
+        padding-right: 10px;
+    }
+      
+    strong{
+        font-family: "Arial Rounded MT Bold", "Helvetica Rounded", Arial, sans-serif;
+        font-size: 2.5vh;
+        color:black
+    }
+    
+    ul {
+          font-family: Arial, sans-serif;
+          font-size: 1.5vh;
+    }
+      
+    .navbar {
+		margin-bottom: 0;
+		border-radius: 0;
+        border: none;
+        border-color: aqua;
+        background-color: rgb(247, 254, 88);
+    }
+      
+    input[type=text], select, textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+        margin-top: 6px;
+        margin-bottom: 16px;
+        resize: vertical;
+    }
+
+    input[type=submit] {
+      background-color: #A58BFF;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    input[type=submit]:hover {
+      background-color: #6c5aa6;
+    }
+
+    .container {
+      border-radius: 5px;
+      background-color: #f2f2f2;
+      padding: 20px;
+    }
+      
+/*	  This is what gives you a big image in the background at the top of the page*/
+	.jumbotron {
+		background-image: url(Home/jumbotron.png);
+		background-size: cover; /*scale image to fit image without changing dimensions*/
+		height: 80vh;
+        margin-bottom: 0px;
+	}
+    .row.content {
+		height: auto;
+		padding-bottom: 3vh;
+		/* adding padding means that there is some negative space between elements on the page- good for separating content and making it easy to read. 
+		vh is a unit of measurement that is based on the height of the user's browser so the content is scaled to the size of the screen.   */
+	  }
+	  #about-img {
+		  max-height: 40vh;/* make sure it never gets too big*/
+		  overflow: hidden;/* In this case, I want to hide the overflow that doesn't fit in the size height I'm defining*/
+	  }
+    /* Set black background color, white text and some padding */
+    footer {
+      background-color: rgb(0, 0, 0);
+      color: white;
+      padding: 15px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="jumbotron" id="home">	
+</div>
+  
+<!--------------------  NAV BAR -------------------->    
+
+<nav class="navbar navbar-inverse">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>                        
+      </button>
+      <a href="home.html" class="navbar-brand"><strong>JAMIE</strong></a>
+    </div>
+    <div class="collapse navbar-collapse" id="myNavbar">
+      <ul class="nav navbar-nav navbar-right">
+        <li><a href="client_work.html">Client Work</a></li> <!-- <li class="active"> -->
+		<li><a href="ixd.html">IXD</a></li>
+        <li><a href="compsci.html">Comp Sci</a></li>
+        <li><a href="involvement.html">Involvement</a></li>
+        <li><a href="home.html">About</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+  
+<!--------------------  ABOUT ME -------------------->
+    
+<br>
+<div class="container-fluid text-center" id="about">    
+  <div class="row content" align="right">
+  </div>
+  <div class="row content">
+  </div>
+	 <div class="col-lg-1 col-sm-1"> 
+	 </div> 
+	  <div class="col-lg-4 col-sm-4" id="about-img">
+		  <img src="Home/prof_pic.png"  class="img-responsive" id="small_img"/>
+	 </div>
+	 <div class="col-lg-6 col-sm-6 text-left"> 
+        <p><about_title style="padding:4px 50% 4px 6px; color:#000000; background-color:rgb(249, 75, 92);">Hi There!</about_title></p>
+        <br><br>
+		<p>I’m Jamie Horowitz from Roslyn Heights, NY.</p><br>
+		<p>I’m a third year student at The George Washington University studying Interaction Design and Computer Science.</p><br>
+        <p>Constantly searching for new ways to integrate these subjects, I've had experiences so far in web design and development, software engineering, virtual reality, wire framing, and UX/UI design. My studies have guided my unique eye and passion for problem solving and design thinking, where I am able to work through issues on both the back and front ends of a product, all to better understand how something works and how to better enhance a user’s experience.</p>
+   
+	  </div>
+	  <div class="col-lg-1 col-sm-1">
+    </div>
+</div>
+    
+<br><br><br>
+    
+<!--------------------  CONTACT ME -------------------->    
+    
+    
+<div class="container-fluid text-center" id="contact">
+	<div class="row content" align="right">
+  </div>
+  <div class="row content">
+  </div>
+	 <div class="col-lg-1 col-sm-1"> 
+	 </div> 
+	
+	 <div class="col-lg-4 col-sm-4 text-left"> 
+        <p1><about_title style="padding:4px 50% 4px 6px; color:#000000; background-color:rgb(122, 217, 249);">Contact Me</about_title></p1>
+        <br><br><br>
+		<p1>Looking to connect? Send me an email <a href="mailto:jhorowitz52@gwu.edu">here</a> or by using this form. </p1>
+		<br><br>
+         <p1>Also find me on Github and LinkedIn.</p1>
+	  </div>
+    
+    <div class="col-lg-6 col-sm-6 text-left" style="padding-left: 80px">
+       <br><br><br><br> 
+      <form action="/action_page.php">
+        <label for="fname">First Name</label>
+        <input type="text" id="fname" name="firstname" placeholder="Your name..">
+
+        <label for="lname">Last Name</label>
+        <input type="text" id="lname" name="lastname" placeholder="Your last name..">
+
+        <label for="subject">Subject</label>
+        <textarea id="subject" name="subject" placeholder="Write something.." style="height:200px"></textarea>
+
+        <input type="submit" value="Submit">
+      </form>
+    </div>
+    <div class="col-lg-1 col-sm-1">
+    </div>
+</div>
+    
+<br><br><br>
+	
+<footer class="container-fluid text-center">
+</footer>
+
+</body>
+</html>
