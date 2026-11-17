@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Australia Zoo Planner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&display=swap">
+<style>
+/* Layout: picker rail on the left, map fills the rest; on phones the map sticks to the top and the picker scrolls below. */
+:root {
+  --bg: #eef0e6;          /* pale gum-leaf */
+  --panel: #ffffff;
+  --ink: #1f2a1d;
+  --muted: #5d6a57;
+  --line: #d3d9c6;
+  --accent: #e2570f;      /* zoo khaki-orange */
+  --accent-ink: #ffffff;
+  --chip: #f6f7f0;
+  --chip-on: #1f3b2b;
+  --chip-on-ink: #ffffff;
+  --warn: #8a5a00;
+  --warn-bg: #fff3d6;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Nunito Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #141a14; --panel: #1c241c; --ink: #e6ecdf; --muted: #a2ae9a; --line: #2f3a2e;
+  --accent: #ff7a33; --accent-ink: #1a0e05; --chip: #222b21; --chip-on: #cfe6c2; --chip-on-ink: #13200f;
+  --warn: #ffd27a; --warn-bg: #3a2e12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #141a14; --panel: #1c241c; --ink: #e6ecdf; --muted: #a2ae9a; --line: #2f3a2e;
+  --accent: #ff7a33; --accent-ink: #1a0e05; --chip: #222b21; --chip-on: #cfe6c2; --chip-on-ink: #13200f;
+  --warn: #ffd27a; --warn-bg: #3a2e12; color-scheme: dark }
+
+* { box-sizing: border-box }
+html, body { height: 100% }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--body) }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg) }
+
+.app { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; height: 100%; }
+.rail { overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel);
+  padding-block: 20px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px; display: flex; flex-direction: column; gap: 18px; min-width: 0 }
+.stage { position: relative; min-width: 0; display: flex; flex-direction: column }
+
+h1 { font: 700 2rem/1 var(--display); letter-spacing: .01em; margin: 0; text-transform: uppercase; text-wrap: balance }
+h1 span { color: var(--accent) }
+.sub { margin: 6px 0 0; color: var(--muted); font-size: .9rem }
+
+.tools { display: flex; gap: 8px; flex-wrap: wrap }
+.btn { font: 600 .85rem var(--body); border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+  padding: 7px 12px; border-radius: 999px; cursor: pointer }
+.btn:hover { border-color: var(--muted) }
+.btn:focus-visible, .chip:focus-visible, .sel-item:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent) }
+
+.search { width: 100%; font: 1rem var(--body); padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--chip); color: var(--ink) }
+
+.group h2 { font: 700 1.05rem/1 var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px }
+.chips { display: flex; flex-wrap: wrap; gap: 6px }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 .88rem var(--body); padding: 6px 11px;
+  border-radius: 999px; border: 1px solid var(--line); background: var(--chip); color: var(--ink); cursor: pointer; text-align: left }
+.chip:hover { border-color: var(--muted) }
+.chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-ink); border-color: var(--chip-on) }
+.chip .num { display: none; min-width: 1.35em; height: 1.35em; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+  font: 700 .75rem/1.35em var(--body); text-align: center; font-variant-numeric: tabular-nums }
+.chip[aria-pressed="true"] .num { display: inline-block }
+.chip .moon { font-size: .72rem; opacity: .75 }
+
+.plan { border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--chip) }
+.plan h2 { margin-bottom: 6px }
+.plan ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px }
+.sel-item { display: flex; gap: 8px; align-items: baseline; width: 100%; border: 0; background: none; color: var(--ink);
+  font: .92rem var(--body); text-align: left; padding: 4px 2px; cursor: pointer; border-radius: 6px }
+.sel-item:hover { background: var(--panel) }
+.sel-item b { flex: none; min-width: 1.5em; height: 1.5em; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+  font: 700 .78rem/1.5em var(--body); text-align: center }
+.sel-item small { color: var(--muted) }
+.empty { color: var(--muted); font-size: .9rem; margin: 0 }
+.note { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 10px 12px; font-size: .85rem }
+
+.mapbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding-block: 10px; padding-left: 16px; padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); background: var(--panel) }
+.mapbar .count { font: 700 1.1rem var(--display); text-transform: uppercase; letter-spacing: .05em }
+.viewport { flex: 1; overflow: auto; position: relative; background: #3d5a2a; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y }
+.canvas { position: relative; width: 100%; margin: 0 auto; transition: width .2s ease }
+.canvas img { display: block; width: 100%; height: auto; max-width: none; user-select: none; -webkit-user-drag: none }
+.canvas svg { position: absolute; inset: 0; width: 100%; height: 100% }
+
+.dim { fill: rgba(10, 20, 8, .5); pointer-events: none; transition: opacity .25s }
+.spot { cursor: pointer }
+.spot .hit { fill: transparent }
+.spot .dot { fill: #fff; stroke: #1f2a1d; stroke-width: 1.5; opacity: 0 }
+.show-all .spot:not(.on) .dot { opacity: .9 }
+.spot.on .ring { fill: none; stroke: #ff6a1a; stroke-width: 4 }
+.spot.on .ring2 { fill: none; stroke: #ffffff; stroke-width: 1.6 }
+.spot.on .pulse { fill: none; stroke: #ff6a1a; stroke-width: 3; transform-box: fill-box; transform-origin: center; animation: pulse 1.8s ease-out infinite }
+.spot .badge circle { fill: #ff6a1a; stroke: #fff; stroke-width: 1.5 }
+.spot .badge text { fill: #fff; font: 700 10px var(--body); text-anchor: middle; dominant-baseline: central }
+.spot:not(.on) .ring, .spot:not(.on) .ring2, .spot:not(.on) .pulse, .spot:not(.on) .badge { display: none }
+.spot.flash .ring { stroke: #ffe14a }
+@keyframes pulse { from { transform: scale(.9); opacity: .9 } to { transform: scale(1.6); opacity: 0 } }
+@media (prefers-reduced-motion: reduce) { .spot.on .pulse { animation: none; opacity: 0 } .canvas { transition: none } }
+
+.tip { position: absolute; z-index: 5; pointer-events: none; background: var(--panel); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 9px; font: 600 .82rem var(--body); box-shadow: 0 4px 14px rgba(0,0,0,.25); transform: translate(-50%, calc(-100% - 14px)); white-space: nowrap }
+.tip small { display: block; font-weight: 400; color: var(--muted) }
+.credit { font-size: .75rem; color: var(--muted); margin: 0 }
+
+@media (max-width: 760px) {
+  html, body { height: auto }
+  .app { display: flex; flex-direction: column; height: auto }
+  .stage { order: -1; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; height: 52vh; border-bottom: 1px solid var(--line) }
+  .mapbar { padding-left: max(16px, env(safe-area-inset-left, 0px)) }
+  .rail { border-right: 0; overflow: visible; padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+}
+</style>
+
+<div class="app">
+  <aside class="rail">
+    <header>
+      <h1>Australia Zoo <span>Planner</span></h1>
+      <p class="sub">Pick the animals you want to see. They light up on the official zoo map, numbered in the order you picked them.</p>
+    </header>
+
+    <div class="tools">
+      <button class="btn" id="btn-clear" type="button">Clear all</button>
+      <button class="btn" id="btn-all" type="button">Select all</button>
+      <button class="btn" id="btn-dots" type="button" aria-pressed="false">Show every enclosure</button>
+    </div>
+
+    <input class="search" id="search" type="search" placeholder="Search animals (e.g. koala, croc)" aria-label="Search animals">
+
+    <section class="plan" aria-live="polite">
+      <div class="group"><h2>Your list</h2></div>
+      <p class="empty" id="plan-empty">Nothing picked yet. Tap an animal below, or turn on “Show every enclosure” and tap a dot on the map.</p>
+      <ol id="plan"></ol>
+    </section>
+
+    <div id="groups"></div>
+
+    <p class="note">☾ = in bed from 4:30pm, so see these earlier. Elephants are out 10am–4pm.</p>
+    <p class="credit">Map: Australia Zoo Visitor Guide, Sep 2024. Locations are taken from the map’s labels; check signage on the day.</p>
+  </aside>
+
+  <main class="stage">
+    <div class="mapbar">
+      <span class="count" id="count">0 animals picked</span>
+      <div class="tools">
+        <button class="btn" id="zoom-out" type="button" aria-label="Zoom out">−</button>
+        <button class="btn" id="zoom-fit" type="button">Fit</button>
+        <button class="btn" id="zoom-in" type="button" aria-label="Zoom in">+</button>
+      </div>
+    </div>
+    <div class="viewport" id="viewport">
+      <div class="canvas" id="canvas">
+        <img src="map.jpg" alt="Australia Zoo visitor map" width="2475" height="2105" id="mapimg">
+        <svg viewBox="0 0 990 842" id="overlay" aria-label="Highlighted animals">
+          <defs><mask id="holes"><rect width="990" height="842" fill="#fff"/><g id="holes-g"></g></mask></defs>
+          <rect class="dim" id="dim" width="990" height="842" mask="url(#holes)" opacity="0"/>
+          <g id="spots"></g>
+        </svg>
+        <div class="tip" id="tip" hidden></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+// Coordinates are in PDF points of the official map (990 x 842 crop), placed on each enclosure's label/icon.
+const N = true; // closes 4:30pm
+const ANIMALS = [
+  // Australian animals
+  { id:"koala", name:"Koalas", g:"Aussie favourites", locs:[["Koala Island",708,54],["Koala Nursery",531,248],["Koalas",179,288]] },
+  { id:"koalawalk", name:"Koala Walk-through", g:"Aussie favourites", locs:[["Koala Walk-through",160,240]] },
+  { id:"greyroo", name:"Grey Kangaroos & Wallabies", g:"Aussie favourites", locs:[["Grey Kangaroos & Wallabies",284,100]] },
+  { id:"redroo", name:"Red Kangaroos & Wallabies", g:"Aussie favourites", locs:[["Red Kangaroos & Wallabies",210,242]] },
+  { id:"wombat", name:"Wombats", g:"Aussie favourites", locs:[["Wombats",309,380],["Wombats",429,357]] },
+  { id:"echidna", name:"Echidnas", g:"Aussie favourites", locs:[["Echidnas",283,136],["Echidnas",862,416],["Echidnas",275,654]] },
+  { id:"devil", name:"Tasmanian Devils", g:"Aussie favourites", locs:[["Tasmanian Devils",793,178]] },
+  { id:"dingo", name:"Dingoes", g:"Aussie favourites", locs:[["Dingoes",793,116]] },
+  { id:"quokka", name:"Quokkas", g:"Aussie favourites", locs:[["Quokkas",283,166]] },
+
+  // Crocs
+  { id:"saltie", name:"Saltwater Crocodiles", g:"Crocs & alligators", locs:[["Saltwater Crocodiles (Crocoseum)",424,26],["Bosco",551,166],["Occy",531,190],["Acco",551,214],["Agro",602,200],["Weipa",670,224],["Mossman",737,216]] },
+  { id:"freshie", name:"Freshwater Crocodiles", g:"Crocs & alligators", locs:[["Freshwater Crocodiles",710,178]] },
+  { id:"gator", name:"American Alligators", g:"Crocs & alligators", locs:[["American Alligators",749,166],["American Alligators",678,325]] },
+
+  // Reptiles
+  { id:"komodo", name:"Komodo Dragons", g:"Reptiles", locs:[["Komodo Dragons",793,302]] },
+  { id:"lizards", name:"Australian Lizards", g:"Reptiles", locs:[["Australian Lizards",858,300]] },
+  { id:"iguana", name:"Rhinoceros Iguanas", g:"Reptiles", locs:[["Rhinoceros Iguanas",695,366]] },
+  { id:"reptilehouse", name:"Robert’s Reptile House", g:"Reptiles", locs:[["Robert’s Reptile House",426,384]] },
+  { id:"burmese", name:"Burmese Python", g:"Reptiles", locs:[["Burmese Python",492,152]] },
+  { id:"retic", name:"Reticulated Python", g:"Reptiles", locs:[["Reticulated Python (with Burmese Python)",492,152]] },
+  { id:"anaconda", name:"Green Anaconda", g:"Reptiles", locs:[["Green Anaconda",492,186]] },
+  { id:"boa", name:"Boa Constrictors", night:N, g:"Reptiles", locs:[["Boa Constrictors (reptile building)",492,186],["Boa Constrictors",255,632]] },
+  { id:"aldabra", name:"Aldabra Tortoises", night:N, g:"Reptiles", locs:[["Aldabra Tortoises",670,286],["Aldabra Tortoises",303,640]] },
+  { id:"radiated", name:"Elongated & Radiated Tortoises", g:"Reptiles", locs:[["Elongated & Radiated Tortoises",132,340]] },
+  { id:"irwinturtle", name:"Irwin’s Turtles", g:"Reptiles", locs:[["Irwin’s Turtles",707,286]] },
+  { id:"fwturtle", name:"Freshwater Turtles", night:N, g:"Reptiles", locs:[["Freshwater Turtles",216,684]] },
+
+  // Birds
+  { id:"cassowary", name:"Cassowaries", g:"Birds", locs:[["Cassowaries",45,190],["Cassowaries",840,66]] },
+  { id:"emu", name:"Emus", g:"Birds", locs:[["Emus",87,192]] },
+  { id:"brolga", name:"Brolgas", g:"Birds", locs:[["Brolgas",121,100]] },
+  { id:"jabiru", name:"Jabirus", g:"Birds", locs:[["Jabirus",96,64]] },
+  { id:"cockatoo", name:"Cockatoos", night:N, g:"Birds", locs:[["Cockatoos",113,176]] },
+  { id:"raptor", name:"Birds of Prey", g:"Birds", locs:[["Birds of Prey",328,312]] },
+  { id:"gracebirds", name:"Grace’s Bird Garden", g:"Birds", locs:[["Grace’s Bird Garden",245,292]] },
+
+  // Asia & more
+  { id:"tiger", name:"Tigers", night:N, g:"Southeast Asia & more", locs:[["Tigers",250,530]] },
+  { id:"elephant", name:"Sumatran Elephants", time:"10am–4pm", g:"Southeast Asia & more", locs:[["Sumatran Elephants",85,410]] },
+  { id:"redpanda", name:"Red Panda", night:N, g:"Southeast Asia & more", locs:[["Red Panda",166,410]] },
+  { id:"otter", name:"Otters", g:"Southeast Asia & more", locs:[["Otters",875,348]] },
+
+  // Africa
+  { id:"giraffe", name:"Giraffes", night:N, g:"Africa", locs:[["Giraffes",351,774]] },
+  { id:"zebra", name:"Zebras", night:N, g:"Africa", locs:[["Zebras",296,774]] },
+  { id:"rhino", name:"Southern White Rhinoceros", night:N, g:"Africa", locs:[["Southern White Rhinoceros",180,766]] },
+  { id:"cheetah", name:"Cheetahs", night:N, g:"Africa", locs:[["Cheetahs",76,644]] },
+  { id:"meerkat", name:"Meerkats", night:N, g:"Africa", locs:[["Meerkats",94,774]] },
+  { id:"lemur", name:"Lemurs", night:N, g:"Africa", locs:[["Lemurs",162,676],["Lemurs",311,686]] },
+];
+const byId = Object.fromEntries(ANIMALS.map(a => [a.id, a]));
+const R = 20;
+
+let selected = [];
+try { selected = JSON.parse(localStorage.getItem("az-sel") || "[]").filter(id => byId[id]); } catch (e) {}
+let zoom = 1;
+
+const $ = id => document.getElementById(id);
+const svgNS = "http://www.w3.org/2000/svg";
+const mk = (tag, attrs = {}, parent) => { const el = document.createElementNS(svgNS, tag); for (const k in attrs) el.setAttribute(k, attrs[k]); parent && parent.appendChild(el); return el; };
+
+// Build picker chips grouped by area
+const groupsEl = $("groups");
+const groupNames = [...new Set(ANIMALS.map(a => a.g))];
+for (const g of groupNames) {
+  const sec = document.createElement("section"); sec.className = "group"; sec.dataset.group = g;
+  sec.innerHTML = `<h2>${g}</h2><div class="chips"></div>`;
+  const chips = sec.querySelector(".chips");
+  for (const a of ANIMALS.filter(x => x.g === g)) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.id = "chip-" + a.id; b.dataset.id = a.id;
+    b.setAttribute("aria-pressed", "false");
+    b.innerHTML = `<span class="num"></span><span>${a.name}</span>${a.night ? '<span class="moon" title="In bed from 4:30pm">☾</span>' : ""}`;
+    b.addEventListener("click", () => toggle(a.id));
+    chips.appendChild(b);
+  }
+  groupsEl.appendChild(sec);
+}
+
+// Build map spots (one per location)
+const spotsG = $("spots");
+const spotEls = {};
+ANIMALS.forEach(a => {
+  spotEls[a.id] = a.locs.map(([label, x, y]) => {
+    const g = mk("g", { class: "spot", tabindex: "-1" }, spotsG);
+    mk("circle", { class: "pulse", cx: x, cy: y, r: R }, g);
+    mk("circle", { class: "ring", cx: x, cy: y, r: R }, g);
+    mk("circle", { class: "ring2", cx: x, cy: y, r: R + 2.5 }, g);
+    mk("circle", { class: "dot", cx: x, cy: y, r: 4.5 }, g);
+    mk("circle", { class: "hit", cx: x, cy: y, r: 14 }, g);
+    const badge = mk("g", { class: "badge" }, g);
+    mk("circle", { cx: x + R * .75, cy: y - R * .75, r: 8 }, badge);
+    const t = mk("text", { x: x + R * .75, y: y - R * .75 }, badge);
+    g._num = t; g._x = x; g._y = y; g._label = label;
+    g.addEventListener("click", ev => { ev.stopPropagation(); if (!selected.includes(a.id) || !document.body.classList.contains("show-all")) showTip(a, g); if (document.body.classList.contains("show-all")) toggle(a.id); });
+    g.addEventListener("mouseenter", () => showTip(a, g));
+    g.addEventListener("mouseleave", hideTip);
+    return g;
+  });
+});
+
+function showTip(a, g) {
+  const tip = $("tip");
+  tip.innerHTML = `${a.name}${g._label !== a.name ? `<small>${g._label}</small>` : ""}${a.night ? "<small>In bed from 4:30pm</small>" : ""}${a.time ? `<small>Out ${a.time}</small>` : ""}`;
+  tip.style.left = (g._x / 990 * 100) + "%";
+  tip.style.top = ((g._y - R) / 842 * 100) + "%";
+  tip.hidden = false;
+}
+function hideTip() { $("tip").hidden = true; }
+$("viewport").addEventListener("click", hideTip);
+
+function toggle(id) {
+  const i = selected.indexOf(id);
+  if (i >= 0) selected.splice(i, 1); else { selected.push(id); focusAnimal(id, true); }
+  render();
+}
+
+function save() { try { localStorage.setItem("az-sel", JSON.stringify(selected)); } catch (e) {} }
+
+function render() {
+  save();
+  const holes = $("holes-g"); holes.innerHTML = "";
+  ANIMALS.forEach(a => {
+    const n = selected.indexOf(a.id) + 1;
+    const chip = $("chip-" + a.id);
+    chip.setAttribute("aria-pressed", n ? "true" : "false");
+    chip.querySelector(".num").textContent = n || "";
+    spotEls[a.id].forEach(g => {
+      g.classList.toggle("on", !!n);
+      g._num.textContent = n || "";
+      if (n) mk("circle", { cx: g._x, cy: g._y, r: R + 6, fill: "#000" }, holes);
+    });
+  });
+  // keep selected spots drawn on top
+  selected.forEach(id => spotEls[id].forEach(g => spotsG.appendChild(g)));
+  $("dim").setAttribute("opacity", selected.length ? "1" : "0");
+  $("count").textContent = `${selected.length} ${selected.length === 1 ? "animal" : "animals"} picked`;
+
+  const plan = $("plan"); plan.innerHTML = "";
+  $("plan-empty").hidden = selected.length > 0;
+  selected.forEach((id, i) => {
+    const a = byId[id];
+    const li = document.createElement("li");
+    const extra = [a.locs.length > 1 ? `${a.locs.length} spots` : "", a.night ? "before 4:30pm" : "", a.time ? a.time : ""].filter(Boolean).join(" · ");
+    li.innerHTML = `<button type="button" class="sel-item"><b>${i + 1}</b><span>${a.name} ${extra ? `<small>${extra}</small>` : ""}</span></button>`;
+    li.querySelector("button").addEventListener("click", () => focusAnimal(id));
+    plan.appendChild(li);
+  });
+}
+
+// Scroll the map to an animal and flash its rings
+function focusAnimal(id, quiet) {
+  const a = byId[id]; const vp = $("viewport"); const cv = $("canvas");
+  const g0 = spotEls[id][0];
+  const xs = spotEls[id].map(g => g._x), ys = spotEls[id].map(g => g._y);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const scale = cv.clientWidth / 990;
+  vp.scrollTo({ left: cx * scale - vp.clientWidth / 2, top: cy * scale - vp.clientHeight / 2, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  spotEls[id].forEach(g => { g.classList.add("flash"); setTimeout(() => g.classList.remove("flash"), 900); });
+  if (!quiet) showTip(a, g0);
+}
+
+// Zoom: canvas width relative to viewport, keeps the centre point
+function fitWidth() {
+  const vp = $("viewport");
+  // "Fit" = whole map visible
+  return Math.min(1, (vp.clientHeight / 842) / (vp.clientWidth / 990)) || 1;
+}
+function setZoom(z) {
+  const vp = $("viewport"), cv = $("canvas");
+  const min = fitWidth();
+  z = Math.max(min, Math.min(4, z));
+  const fx = (vp.scrollLeft + vp.clientWidth / 2) / cv.clientWidth, fy = (vp.scrollTop + vp.clientHeight / 2) / cv.clientHeight;
+  zoom = z; cv.style.width = (z * 100) + "%";
+  requestAnimationFrame(() => {
+    vp.scrollLeft = fx * cv.clientWidth - vp.clientWidth / 2;
+    vp.scrollTop = fy * cv.clientHeight - vp.clientHeight / 2;
+  });
+}
+$("zoom-in").addEventListener("click", () => setZoom(zoom * 1.5));
+$("zoom-out").addEventListener("click", () => setZoom(zoom / 1.5));
+$("zoom-fit").addEventListener("click", () => setZoom(fitWidth()));
+
+$("btn-clear").addEventListener("click", () => { selected = []; hideTip(); render(); });
+$("btn-all").addEventListener("click", () => { selected = ANIMALS.map(a => a.id); render(); });
+$("btn-dots").addEventListener("click", e => {
+  const on = document.body.classList.toggle("show-all");
+  e.currentTarget.setAttribute("aria-pressed", on ? "true" : "false");
+  e.currentTarget.classList.toggle("primary", on);
+});
+
+$("search").addEventListener("input", e => {
+  const q = e.target.value.trim().toLowerCase();
+  document.querySelectorAll(".chip").forEach(c => {
+    const a = byId[c.dataset.id];
+    c.hidden = q && !(a.name.toLowerCase().includes(q) || a.g.toLowerCase().includes(q) || a.locs.some(l => l[0].toLowerCase().includes(q)));
+  });
+  document.querySelectorAll(".group[data-group]").forEach(s => { s.hidden = !s.querySelector(".chip:not([hidden])"); });
+});
+
+// Phones start zoomed in so labels are readable
+window.addEventListener("load", () => { if (innerWidth <= 760) setZoom(2.2); else setZoom(fitWidth()); });
+render();
+</script>
