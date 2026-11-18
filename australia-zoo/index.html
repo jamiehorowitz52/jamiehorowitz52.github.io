@@ -34,6 +34,7 @@
   --warn: #ffd27a; --warn-bg: #3a2e12; color-scheme: dark }
 
 * { box-sizing: border-box }
+html, button, input, .rail { touch-action: manipulation } /* no double-tap-zoom eating quick taps */
 html, body { height: 100% }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--body) }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg) }
@@ -124,7 +125,12 @@ h1 span { color: var(--accent) }
 @media (max-width: 760px) {
   .drawer { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 58%; border-radius: 16px 16px 0 0; border-bottom: 0;
     padding-bottom: env(safe-area-inset-bottom, 0px) }
-  .drawer.closed { transform: translateY(calc(100% + 24px)) }
+  /* collapsed = the sheet's header stays peeking at the bottom as a tab */
+  .drawer.closed { visibility: visible; transition: transform .28s ease; transform: translateY(calc(100% - var(--peek, 64px) - env(safe-area-inset-bottom, 0px))) }
+  .drawer-head { cursor: pointer; touch-action: none; user-select: none; -webkit-user-select: none }
+  .drawer.closed .drawer-head { border-bottom-color: transparent }
+  .drawer.dragging { transition: none }
+  .iconbtn { width: 44px; height: 44px; font-size: 1.15rem }
   .drawer-head .sub { display: none }
   .drawer-head { flex-wrap: nowrap; position: relative; padding-top: 18px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
   .drawer-head .grab { display: block; position: absolute; top: 6px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line) }
@@ -166,7 +172,7 @@ h1 span { color: var(--accent) }
         <h1>Australia Zoo <span>Planner</span></h1>
         <p class="sub">Pick animals and they light up on the map, numbered in the order you picked them.</p>
       </div>
-      <button class="iconbtn" id="drawer-close" type="button" aria-label="Collapse animal list">✕</button>
+      <button class="iconbtn" id="drawer-close" type="button" aria-label="Collapse animal list" aria-controls="drawer">✕</button>
     </div>
   <div class="rail">
     <div class="tools">
@@ -414,13 +420,47 @@ function setDrawer(open) {
   const t = $("drawer-toggle");
   t.setAttribute("aria-expanded", open ? "true" : "false");
   t.firstChild.textContent = open ? "Hide animals" : "Pick animals";
+  const c = $("drawer-close"), phone = innerWidth <= 760;
+  c.textContent = open ? (phone ? "▾" : "✕") : "▴";
+  c.setAttribute("aria-label", open ? "Collapse animal list" : "Expand animal list");
+  c.setAttribute("aria-expanded", open ? "true" : "false");
   try { localStorage.setItem("az-drawer", open ? "1" : "0"); } catch (e) {}
 }
 $("drawer-toggle").addEventListener("click", () => setDrawer($("drawer").classList.contains("closed")));
-$("drawer-close").addEventListener("click", () => { setDrawer(false); $("drawer-toggle").focus(); });
+const isOpen = () => !$("drawer").classList.contains("closed");
+$("drawer-close").addEventListener("click", e => { e.stopPropagation(); setDrawer(!isOpen()); });
+
+// Phone bottom sheet: tap the header to toggle, or drag it up/down
+function setPeek() { $("drawer").style.setProperty("--peek", $("drawer").querySelector(".drawer-head").offsetHeight + "px"); }
+addEventListener("resize", () => { setPeek(); setDrawer(isOpen()); });
+(() => {
+  const head = $("drawer").querySelector(".drawer-head"), dr = $("drawer");
+  let y0 = null, moved = 0, base = 0;
+  head.addEventListener("pointerdown", e => {
+    if (innerWidth > 760 || e.target.closest("button")) return;
+    y0 = e.clientY; moved = 0;
+    base = isOpen() ? 0 : dr.offsetHeight - head.offsetHeight;
+    dr.classList.add("dragging");
+  });
+  addEventListener("pointermove", e => {
+    if (y0 === null) return;
+    moved = e.clientY - y0;
+    const y = Math.max(0, Math.min(dr.offsetHeight - head.offsetHeight, base + moved));
+    dr.style.transform = `translateY(${y}px)`;
+  });
+  const end = () => {
+    if (y0 === null) return;
+    y0 = null; dr.classList.remove("dragging"); dr.style.transform = "";
+    if (Math.abs(moved) < 8) setDrawer(!isOpen());       // a tap
+    else setDrawer(moved < 0);                            // swipe up opens, down closes
+  };
+  addEventListener("pointerup", end);
+  addEventListener("pointercancel", end);
+})();
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("drawer").classList.contains("closed")) setDrawer(false); });
 let drawerOpen = true;
 try { drawerOpen = localStorage.getItem("az-drawer") !== "0"; } catch (e) {}
+setPeek();
 setDrawer(drawerOpen);
 
 // Phones start zoomed in so labels are readable
