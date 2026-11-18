@@ -38,10 +38,21 @@ html, body { height: 100% }
 body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 var(--body) }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg) }
 
-.app { display: grid; grid-template-columns: minmax(300px, 380px) 1fr; height: 100%; }
-.rail { overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel);
-  padding-block: 20px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: 16px; display: flex; flex-direction: column; gap: 18px; min-width: 0 }
-.stage { position: relative; min-width: 0; display: flex; flex-direction: column }
+.stage { position: relative; height: 100%; min-width: 0; display: flex; flex-direction: column }
+.mapwrap { position: relative; flex: 1; min-height: 0; display: flex }
+
+/* Drawer: floats over the map on the left; becomes a bottom sheet on phones */
+.drawer { position: absolute; z-index: 8; top: 12px; bottom: 12px; left: max(12px, env(safe-area-inset-left, 0px));
+  width: min(380px, calc(100% - 24px)); display: flex; flex-direction: column; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.28);
+  transition: transform .28s ease, visibility 0s linear 0s }
+.drawer.closed { transform: translateX(calc(-100% - 32px)); visibility: hidden; transition: transform .28s ease, visibility 0s linear .28s }
+.drawer-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line) }
+.drawer-head .grab { display: none }
+.rail { overflow-y: auto; padding: 16px 16px 24px; display: flex; flex-direction: column; gap: 18px; min-width: 0; overscroll-behavior: contain }
+.iconbtn { width: 34px; height: 34px; border-radius: 999px; border: 1px solid var(--line); background: var(--chip); color: var(--ink); font: 700 1rem var(--body); cursor: pointer; flex: none }
+.iconbtn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.toggle-btn .badge-n { display: inline-block; min-width: 1.4em; margin-left: 4px; padding: 0 5px; border-radius: 999px; background: var(--accent-ink); color: var(--accent); font: 700 .75rem/1.4em var(--body); text-align: center }
 
 h1 { font: 700 2rem/1 var(--display); letter-spacing: .01em; margin: 0; text-transform: uppercase; text-wrap: balance }
 h1 span { color: var(--accent) }
@@ -107,22 +118,57 @@ h1 span { color: var(--accent) }
 .tip small { display: block; font-weight: 400; color: var(--muted) }
 .credit { font-size: .75rem; color: var(--muted); margin: 0 }
 
+.mapbar { padding-left: max(16px, env(safe-area-inset-left, 0px)) }
+.mapbar .left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap }
+
 @media (max-width: 760px) {
-  html, body { height: auto }
-  .app { display: flex; flex-direction: column; height: auto }
-  .stage { order: -1; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; height: 52vh; border-bottom: 1px solid var(--line) }
-  .mapbar { padding-left: max(16px, env(safe-area-inset-left, 0px)) }
-  .rail { border-right: 0; overflow: visible; padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+  .drawer { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 58%; border-radius: 16px 16px 0 0; border-bottom: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px) }
+  .drawer.closed { transform: translateY(calc(100% + 24px)) }
+  .drawer-head .sub { display: none }
+  .drawer-head { flex-wrap: nowrap; position: relative; padding-top: 18px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+  .drawer-head .grab { display: block; position: absolute; top: 6px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line) }
+  .rail { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+  h1 { font-size: 1.6rem }
+  .mapbar .count { display: none }
 }
 </style>
 
-<div class="app">
-  <aside class="rail">
-    <header>
-      <h1>Australia Zoo <span>Planner</span></h1>
-      <p class="sub">Pick the animals you want to see. They light up on the official zoo map, numbered in the order you picked them.</p>
-    </header>
+<main class="stage">
+  <div class="mapbar">
+    <div class="left">
+      <button class="btn primary toggle-btn" id="drawer-toggle" type="button" aria-controls="drawer" aria-expanded="true">Hide animals<span class="badge-n" id="toggle-n">0</span></button>
+      <span class="count" id="count">0 animals picked</span>
+    </div>
+    <div class="tools">
+      <button class="btn" id="zoom-out" type="button" aria-label="Zoom out">−</button>
+      <button class="btn" id="zoom-fit" type="button">Fit</button>
+      <button class="btn" id="zoom-in" type="button" aria-label="Zoom in">+</button>
+    </div>
+  </div>
+  <div class="mapwrap">
+  <div class="viewport" id="viewport">
+    <div class="canvas" id="canvas">
+      <img src="map.jpg" alt="Australia Zoo visitor map" width="2475" height="2105" id="mapimg">
+      <svg viewBox="0 0 990 842" id="overlay" aria-label="Highlighted animals">
+        <defs><mask id="holes"><rect width="990" height="842" fill="#fff"/><g id="holes-g"></g></mask></defs>
+        <rect class="dim" id="dim" width="990" height="842" mask="url(#holes)" opacity="0"/>
+        <g id="spots"></g>
+      </svg>
+      <div class="tip" id="tip" hidden></div>
+    </div>
+  </div>
 
+  <aside class="drawer" id="drawer" aria-label="Animal picker">
+    <div class="drawer-head">
+      <span class="grab" aria-hidden="true"></span>
+      <div>
+        <h1>Australia Zoo <span>Planner</span></h1>
+        <p class="sub">Pick animals and they light up on the map, numbered in the order you picked them.</p>
+      </div>
+      <button class="iconbtn" id="drawer-close" type="button" aria-label="Collapse animal list">✕</button>
+    </div>
+  <div class="rail">
     <div class="tools">
       <button class="btn" id="btn-clear" type="button">Clear all</button>
       <button class="btn" id="btn-all" type="button">Select all</button>
@@ -141,30 +187,10 @@ h1 span { color: var(--accent) }
 
     <p class="note">☾ = in bed from 4:30pm, so see these earlier. Elephants are out 10am–4pm.</p>
     <p class="credit">Map: Australia Zoo Visitor Guide, Sep 2024. Locations are taken from the map’s labels; check signage on the day.</p>
+  </div>
   </aside>
-
-  <main class="stage">
-    <div class="mapbar">
-      <span class="count" id="count">0 animals picked</span>
-      <div class="tools">
-        <button class="btn" id="zoom-out" type="button" aria-label="Zoom out">−</button>
-        <button class="btn" id="zoom-fit" type="button">Fit</button>
-        <button class="btn" id="zoom-in" type="button" aria-label="Zoom in">+</button>
-      </div>
-    </div>
-    <div class="viewport" id="viewport">
-      <div class="canvas" id="canvas">
-        <img src="map.jpg" alt="Australia Zoo visitor map" width="2475" height="2105" id="mapimg">
-        <svg viewBox="0 0 990 842" id="overlay" aria-label="Highlighted animals">
-          <defs><mask id="holes"><rect width="990" height="842" fill="#fff"/><g id="holes-g"></g></mask></defs>
-          <rect class="dim" id="dim" width="990" height="842" mask="url(#holes)" opacity="0"/>
-          <g id="spots"></g>
-        </svg>
-        <div class="tip" id="tip" hidden></div>
-      </div>
-    </div>
-  </main>
-</div>
+  </div>
+</main>
 
 <script>
 // Coordinates are in PDF points of the official map (990 x 842 crop), placed on each enclosure's label/icon.
@@ -310,6 +336,7 @@ function render() {
   selected.forEach(id => spotEls[id].forEach(g => spotsG.appendChild(g)));
   $("dim").setAttribute("opacity", selected.length ? "1" : "0");
   $("count").textContent = `${selected.length} ${selected.length === 1 ? "animal" : "animals"} picked`;
+  $("toggle-n").textContent = selected.length;
 
   const plan = $("plan"); plan.innerHTML = "";
   $("plan-empty").hidden = selected.length > 0;
@@ -330,7 +357,15 @@ function focusAnimal(id, quiet) {
   const xs = spotEls[id].map(g => g._x), ys = spotEls[id].map(g => g._y);
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
   const scale = cv.clientWidth / 990;
-  vp.scrollTo({ left: cx * scale - vp.clientWidth / 2, top: cy * scale - vp.clientHeight / 2, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  // centre in the part of the map the drawer doesn't cover
+  let l = 0, t = 0, w = vp.clientWidth, h = vp.clientHeight;
+  const dr = $("drawer");
+  if (!dr.classList.contains("closed")) {
+    const v = vp.getBoundingClientRect(), d = dr.getBoundingClientRect();
+    if (innerWidth <= 760) h = Math.max(80, d.top - v.top);
+    else { l = d.right - v.left; w = Math.max(80, v.width - l); }
+  }
+  vp.scrollTo({ left: cx * scale - (l + w / 2), top: cy * scale - (t + h / 2), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   spotEls[id].forEach(g => { g.classList.add("flash"); setTimeout(() => g.classList.remove("flash"), 900); });
   if (!quiet) showTip(a, g0);
 }
@@ -372,6 +407,21 @@ $("search").addEventListener("input", e => {
   });
   document.querySelectorAll(".group[data-group]").forEach(s => { s.hidden = !s.querySelector(".chip:not([hidden])"); });
 });
+
+// Drawer open/close (remembered per browser)
+function setDrawer(open) {
+  $("drawer").classList.toggle("closed", !open);
+  const t = $("drawer-toggle");
+  t.setAttribute("aria-expanded", open ? "true" : "false");
+  t.firstChild.textContent = open ? "Hide animals" : "Pick animals";
+  try { localStorage.setItem("az-drawer", open ? "1" : "0"); } catch (e) {}
+}
+$("drawer-toggle").addEventListener("click", () => setDrawer($("drawer").classList.contains("closed")));
+$("drawer-close").addEventListener("click", () => { setDrawer(false); $("drawer-toggle").focus(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("drawer").classList.contains("closed")) setDrawer(false); });
+let drawerOpen = true;
+try { drawerOpen = localStorage.getItem("az-drawer") !== "0"; } catch (e) {}
+setDrawer(drawerOpen);
 
 // Phones start zoomed in so labels are readable
 window.addEventListener("load", () => { if (innerWidth <= 760) setZoom(2.2); else setZoom(fitWidth()); });
